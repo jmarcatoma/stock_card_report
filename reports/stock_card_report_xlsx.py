@@ -3,6 +3,7 @@
 
 from odoo import models, _
 import json
+from datetime import datetime
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -664,7 +665,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
                 line_price_unit = -abs_line_price_unit
             inventory_value += net_value
             report_values = {
-                'date': line['date'] or '',
+                    'date': line['date'] and datetime.strptime(line['date'], '%Y-%m-%d %H:%M:%S') or '',
                 'product_id': product.display_name or '',
                 'code': code,
                 'reference': line['reference'] or '',
