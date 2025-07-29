@@ -512,7 +512,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
                 line_product_in = line['product_in'] if line['location_dest_id'] in loc_ids.ids else 0
                 line_product_out = line['product_out'] if line['location_id'] in loc_ids.ids else 0
                 net_qty = (line_product_in - line_product_out)
-                abs_line_value = abs(line['value'])
+                abs_line_value = abs(line['value'] or 0)
                 if net_qty > 0:
                     line_value += abs_line_value
                 elif net_qty < 0:
@@ -652,9 +652,9 @@ class ReportStockCardReportXlsx(models.TransientModel):
             product_out = line['product_out'] if line['location_id'] in loc_ids.ids else 0
             net_qty = (product_in - product_out)
             balance += net_qty
-            abs_value = abs(line['value'] + line['landed_cost_value'])
-            abs_line_value = abs(line['value'])
-            abs_line_price_unit = abs(line['price_unit'])
+            abs_value = abs((line['value'] or 0) + (line['landed_cost_value'] or 0))
+            abs_line_value = abs(line['value'] or 0)
+            abs_line_price_unit = abs(line['price_unit'] or 0)
             if net_qty > 0:
                 net_value = abs_value
                 line_value = abs_line_value
