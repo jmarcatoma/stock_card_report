@@ -195,8 +195,6 @@ class StockCardReport(models.TransientModel):
             tuple(locations.ids + [0]),
             tuple(locations.ids + [0]),
             self.date_from,
-            tuple(locations.ids + [0]),
-            tuple(locations.ids + [0]),
             tuple(self.product_ids.ids + [0]),
             self.date_to,
         ]
