@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_stock_card_view_report,stock.card.view.report.access,model_stock_card_view,,1,1,1,1

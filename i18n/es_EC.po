@@ -1,0 +1,350 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+#	* stock_card_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 12.0-20190424\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-01-09 02:57+0000\n"
+"PO-Revision-Date: 2020-01-09 02:57+0000\n"
+"Last-Translator: <>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_buttons
+msgid "<span class=\"fa fa-download\"/>Export"
+msgstr "Exportar"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_buttons
+msgid "<span class=\"fa fa-print\"/>Print"
+msgstr "Imprimir"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:130
+#, python-format
+msgid "Account Move"
+msgstr "Movimiento contable"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:120
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_lines_header
+#, python-format
+msgid "Balance"
+msgstr "Balance"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.stock_card_report_wizard_form
+msgid "Cancel"
+msgstr "Cancelar"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__create_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__create_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__create_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__create_uid
+msgid "Created by"
+msgstr "Creado por"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__create_date
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__create_date
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__create_date
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__create_date
+msgid "Created on"
+msgstr "Creado el"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:32
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__date
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_lines_header
+#, python-format
+msgid "Date"
+msgstr "Fecha"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__date_from
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_report_filters
+msgid "Date From"
+msgstr "Desde"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__date_to
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_report_filters
+msgid "Date To"
+msgstr "Hasta"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:162
+#, python-format
+msgid "Date from"
+msgstr "Desde"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:162
+#, python-format
+msgid "Date to"
+msgstr "Hasta"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:52
+#, python-format
+msgid "Destination location"
+msgstr "Ubicación de destino"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__display_name
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__display_name
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__display_name
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__display_name
+msgid "Display Name"
+msgstr "Nombre a mostrar"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__date_to
+msgid "End Date"
+msgstr "Fecha final"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.stock_card_report_wizard_form
+msgid "Export PDF"
+msgstr "Exportar PDF"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.stock_card_report_wizard_form
+msgid "Export XLSX"
+msgstr "Exportar XLSX"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__id
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__id
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__id
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__id
+msgid "ID"
+msgstr "ID"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:177
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_report_base
+#, python-format
+msgid "Initial"
+msgstr "Balance inicial"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:70
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_lines_header
+#, python-format
+msgid "Input"
+msgstr "Ingresos"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__is_initial
+msgid "Is Initial"
+msgstr "Es inicial"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__landed_cost_value
+msgid "Landed Cost Value"
+msgstr "Valor de costos en destino"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:110
+#, python-format
+msgid "Landed cost value"
+msgstr "Valor de costos en destino"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report____last_update
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx____last_update
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard____last_update
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view____last_update
+msgid "Last Modified on"
+msgstr "Última modificación en"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__write_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__write_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__write_uid
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__write_date
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report_report_stock_card_report_xlsx__write_date
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__write_date
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:162
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__location_ids
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__location_id
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_report_filters
+#, python-format
+msgid "Location"
+msgstr "Ubicación"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__location_dest_id
+msgid "Location Dest"
+msgstr "Ubicación de destino"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__location_ids
+msgid "Locations"
+msgstr "Ubicaciones"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__move_id
+msgid "Move"
+msgstr "Movimiento"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:80
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_lines_header
+#, python-format
+msgid "Output"
+msgstr "Egresos"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__date_range_id
+msgid "Period"
+msgstr "Periodo"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:90
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__price_unit
+#, python-format
+msgid "Price Unit"
+msgstr "Valor unitario"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__product_ids
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_id
+msgid "Product"
+msgstr "Producto"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_in
+msgid "Product In"
+msgstr "Entrada"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_out
+msgid "Product Out"
+msgstr "Salida"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_qty
+msgid "Product Qty"
+msgstr "Cantidad"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_uom
+msgid "Product Uom"
+msgstr "Unidad de medida"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__product_uom_qty
+msgid "Product Uom Qty"
+msgstr "Unidad de medida"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__product_ids
+msgid "Products"
+msgstr "Productos"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:61
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__reference
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_lines_header
+#, python-format
+msgid "Reference"
+msgstr "Referencia"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_report_stock_card_report__results
+msgid "Results"
+msgstr "Resultados"
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:43
+#, python-format
+msgid "Source location"
+msgstr "Ubicación de origen"
+
+#. module: stock_card_report
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_report_wizard__date_from
+msgid "Start Date"
+msgstr "Fecha de inicio"
+
+#. module: stock_card_report
+#: model:ir.actions.act_window,name:stock_card_report.stock_card_report_action
+#: model:ir.ui.menu,name:stock_card_report.stock_card_report_menu
+msgid "Stock Card"
+msgstr "Kardex de inventario"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.report_stock_card_report_base
+msgid "Stock Card -"
+msgstr "Kardex de Inventario -"
+
+#. module: stock_card_report
+#: model:ir.actions.report,name:stock_card_report.action_stock_card_report_pdf
+msgid "Stock Card PDF"
+msgstr "Kardex PDF"
+
+#. module: stock_card_report
+#: model:ir.actions.client,name:stock_card_report.action_report_stock_card_report_html
+#: model:ir.model,name:stock_card_report.model_report_stock_card_report
+msgid "Stock Card Report"
+msgstr "Reporte de Kardex de Inventario"
+
+#. module: stock_card_report
+#: model:ir.model,name:stock_card_report.model_stock_card_report_wizard
+msgid "Stock Card Report Wizard"
+msgstr "Asistente del Kardex de Inventario"
+
+#. module: stock_card_report
+#: model:ir.model,name:stock_card_report.model_stock_card_view
+msgid "Stock Card View"
+msgstr "Vista del Kardex de Inventario"
+
+#. module: stock_card_report
+#: model:ir.actions.report,name:stock_card_report.action_stock_card_report_xlsx
+msgid "Stock Card XLSX"
+msgstr "Kardex XLSX"
+
+#. module: stock_card_report
+#: model:ir.model.fields,help:stock_card_report.field_report_stock_card_report__results
+msgid "Use compute fields, so there is nothing store in database"
+msgstr "Usado para calcular campos, nada se almacena en la base de datos."
+
+#. module: stock_card_report
+#: code:addons/stock_card_report/reports/stock_card_report_xlsx.py:100
+#: model:ir.model.fields,field_description:stock_card_report.field_stock_card_view__value
+#, python-format
+msgid "Value"
+msgstr "Valor"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.stock_card_report_wizard_form
+msgid "View"
+msgstr "Ver"
+
+#. module: stock_card_report
+#: model_terms:ir.ui.view,arch_db:stock_card_report.stock_card_report_wizard_form
+msgid "or"
+msgstr "o"
+
+#. module: stock_card_report
+#: model:ir.model,name:stock_card_report.model_report_stock_card_report_report_stock_card_report_xlsx
+msgid "report.stock_card_report.report_stock_card_report_xlsx"
+msgstr "report.stock_card_report.report_stock_card_report_xlsx"
