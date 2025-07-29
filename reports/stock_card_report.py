@@ -195,11 +195,17 @@ class StockCardReport(models.TransientModel):
             tuple(locations.ids + [0]),
             tuple(locations.ids + [0]),
             self.date_from,
+            tuple(locations.ids + [0]),
+            tuple(locations.ids + [0]),
             tuple(self.product_ids.ids + [0]),
             self.date_to,
         ]
+        params.insert(3, tuple(locations.ids + [0]))
+        params.insert(4, tuple(locations.ids + [0]))
         if self.lot_ids:
             params.append(tuple(self.lot_ids.ids + [0]))
+
+
 
         self._cr.execute(query, tuple(params))
         stock_card_results = self._cr.dictfetchall()
