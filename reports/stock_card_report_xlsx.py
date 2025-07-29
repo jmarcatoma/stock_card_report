@@ -412,7 +412,8 @@ class ReportStockCardReportXlsx(models.TransientModel):
 
                 if not o.group_by_lot and not o.group_by_location:
                     row_pos = self._render_report_lines(
-                        o, ws, row_pos, ws_params, p_lines, product, loc_ids=product_locations
+                        o, ws, row_pos, ws_params, p_lines, product, loc_ids=product_locations,
+                        location_names=location_names, lot_names=lot_names, partner_names=partner_names
                     )
 
                 elif o.group_by_lot and not o.group_by_location:
@@ -423,7 +424,8 @@ class ReportStockCardReportXlsx(models.TransientModel):
                         row_pos = self._render_report_lines(
                             o, ws, row_pos, ws_params, lot_lines, product, lot_id=lot,
                             loc_ids=product_locations,
-                            include_sublocations=o.include_sublocations)
+                            include_sublocations=o.include_sublocations,
+                            location_names=location_names, lot_names=lot_names, partner_names=partner_names)
                 elif o.group_by_location:
                     # We exclude all sublocations if the report is marked to include sublocations, to
                     # avoid printing the same location recursive as a child and on it's own sections.
@@ -448,7 +450,8 @@ class ReportStockCardReportXlsx(models.TransientModel):
                         if not o.group_by_lot:
                             row_pos = self._render_report_lines(
                                 o, ws, row_pos, ws_params, loc_lines, product, location_id=loc,
-                                loc_ids=loc_ids, include_sublocations=o.include_sublocations)
+                                loc_ids=loc_ids, include_sublocations=o.include_sublocations,
+                                location_names=location_names, lot_names=lot_names, partner_names=partner_names)
                         else:
                             lot_ids = list(set([l['lot_id'] for l in loc_lines if l['lot_id']]))
                             lots = self.env['stock.production.lot'].browse(lot_ids)
@@ -457,28 +460,34 @@ class ReportStockCardReportXlsx(models.TransientModel):
                                 row_pos = self._render_report_lines(
                                     o, ws, row_pos, ws_params, lot_lines_per_lot, product,
                                     lot_id=lot, location_id=loc, loc_ids=loc_ids,
-                                    include_sublocations=o.include_sublocations
+                                    include_sublocations=o.include_sublocations,
+                                    location_names=location_names, lot_names=lot_names, partner_names=partner_names
                                 )
 
     def _render_report_lines(
             self, o, ws, row_pos, ws_params, lines, product,
             lot_id=False, location_id=False, loc_ids=False,
-            include_sublocations=False
-            ):
+            include_sublocations=False, location_names=None,
+            lot_names=None, partner_names=None):
         if not lines:
             return row_pos
         if o.consolidated:
             return self._render_consolidated_lines(
                 o, ws, row_pos, ws_params, lines, product,
-                lot_id, location_id, loc_ids)
+                lot_id, location_id, loc_ids,
+                location_names=location_names, lot_names=lot_names,
+                partner_names=partner_names)
         else:
             return self._render_detailed_lines(
                 o, ws, row_pos, ws_params, lines, product,
-                lot_id, location_id, loc_ids, include_sublocations)
+                lot_id, location_id, loc_ids, include_sublocations,
+                location_names=location_names, lot_names=lot_names,
+                partner_names=partner_names)
 
     def _render_consolidated_lines(
             self, o, ws, row_pos, ws_params, lines, product,
-            lot_id=False, location_id=False, loc_ids=False):
+            lot_id=False, location_id=False, loc_ids=False,
+            location_names=None, lot_names=None, partner_names=None):
         product_lines = [l for l in lines if not l['is_initial']]
         initial_lines = [l for l in lines if l['is_initial']]
         balance = o._get_initial(initial_lines)
@@ -555,7 +564,8 @@ class ReportStockCardReportXlsx(models.TransientModel):
     def _render_detailed_lines(
             self, o, ws, row_pos, ws_params, lines, product,
             lot_id=False, location_id=False, loc_ids=False,
-            include_sublocations=False):
+            include_sublocations=False, location_names=None,
+            lot_names=None, partner_names=None):
         product_lines = [l for l in lines if not l['is_initial']]
         initial_lines = [l for l in lines if l['is_initial']]
         balance = o._get_initial(initial_lines)
