@@ -148,6 +148,9 @@ class StockCardReport(models.TransientModel):
         lot_where = ""
         if self.lot_ids:
             lot_where = "AND line.lot_id in %s"
+        else:
+            # We need to remove the %s from the query if there are no lots
+            query_template = query_template.replace("{lot_where}", "")
 
         # If we are not showing lots, we can use the stock_move table directly
         if not self.show_lot and not self.lot_ids and self.include_sublocations:
