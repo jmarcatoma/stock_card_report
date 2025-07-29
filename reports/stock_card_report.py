@@ -237,7 +237,7 @@ class StockCardReport(models.TransientModel):
             line_product_in = line['product_in'] or 0
             line_product_out = line['product_out'] or 0
             net_qty = (line_product_in - line_product_out)
-            abs_value = abs(line['value'] + line['landed_cost_value'])
+            abs_value = abs((line['value'] or 0) + (line['landed_cost_value'] or 0))
             if net_qty > 0:
                 net_value += abs_value
             elif net_qty < 0:
