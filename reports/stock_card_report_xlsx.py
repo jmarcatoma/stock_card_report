@@ -3,7 +3,6 @@
 
 from odoo import models, _
 import json
-import base64
 from types import SimpleNamespace
 
 import logging
@@ -16,8 +15,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
 
     def generate_xlsx_report(self, workbook, data, objects):
         self._define_formats(workbook)
-        data = base64.b64decode(objects.results)
-        data = json.loads(data)
+        data = json.loads(objects.results)
         # We will receive a dictionary with all the report data, we will
         # convert it to a SimpleNamespace to be able to access the data with
         # the dot notation.

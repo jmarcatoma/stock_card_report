@@ -1,7 +1,6 @@
 # Copyright 2019 Ecosoft Co., Ltd. (http://ecosoft.co.th) License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 import statistics
 import json
-import base64
 
 from odoo import api, fields, models, _
 
@@ -208,7 +207,7 @@ class StockCardReport(models.TransientModel):
 
         self._cr.execute(query, tuple(params))
         stock_card_results = self._cr.dictfetchall()
-        self.results = base64.b64encode(json.dumps(stock_card_results, default=str).encode('utf-8'))
+        self.results = json.dumps(stock_card_results, default=str)
 
     @api.multi
     def _get_initial(self, product_line):
