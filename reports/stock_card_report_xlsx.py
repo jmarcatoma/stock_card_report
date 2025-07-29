@@ -2,6 +2,9 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 from odoo import models, _
+import json
+import base64
+from types import SimpleNamespace
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -13,6 +16,12 @@ class ReportStockCardReportXlsx(models.TransientModel):
 
     def generate_xlsx_report(self, workbook, data, objects):
         self._define_formats(workbook)
+        data = base64.b64decode(objects.results)
+        data = json.loads(data)
+        # We will receive a dictionary with all the report data, we will
+        # convert it to a SimpleNamespace to be able to access the data with
+        # the dot notation.
+        data = SimpleNamespace(**data)
         for ws_params in self._get_ws_params(workbook, data, objects):
             ws_name = ws_params.get('ws_name')
             ws_name = self._check_ws_name(ws_name)
@@ -377,25 +386,40 @@ class ReportStockCardReportXlsx(models.TransientModel):
                 default_format=self.format_theader_blue_center)
             ws.freeze_panes(row_pos, 0)
 
-            product_ids = objects.results.mapped('product_id')
+            product_ids = list(set([l['product_id'] for l in data.results]))
+            products = self.env['product.product'].browse(product_ids)
 
-            for product in product_ids:
-                p_lines = o.results.filtered(
-                    lambda l: l.product_id == product
-                )
+            location_ids = list(set([l['location_id'] for l in data.results] + [l['location_dest_id'] for l in data.results]))
+            locations = self.env['stock.location'].browse(location_ids)
+            location_names = {loc.id: loc.display_name for loc in locations}
+
+            lot_ids = list(set([l['lot_id'] for l in data.results if l['lot_id']]))
+            lots = self.env['stock.production.lot'].browse(lot_ids)
+            lot_names = {lot.id: lot.name for lot in lots}
+
+            partner_ids = list(set([l['partner_id'] for l in data.results if l['partner_id']]))
+            partners = self.env['res.partner'].browse(partner_ids)
+            partner_names = {partner.id: partner.name for partner in partners}
+
+            for product in products:
+                p_lines = [l for l in data.results if l['product_id'] == product.id]
                 # We compute the location in the lines to avoid printing a section if there is no
                 # product lines on a selected warehouse or location and to include computed locations,
                 # for example, when only warehouse is provided and we print all it's locations.
-                product_locations = p_lines.mapped('location_dest_id') | p_lines.mapped('location_id')
+                product_locations = list(set([l['location_dest_id'] for l in p_lines] + [l['location_id'] for l in p_lines]))
+                product_locations = self.env['stock.location'].browse(product_locations)
                 product_locations = product_locations.filtered(lambda x: x in o.reported_location_ids)
+
                 if not o.group_by_lot and not o.group_by_location:
                     row_pos = self._render_report_lines(
                         o, ws, row_pos, ws_params, p_lines, product, loc_ids=product_locations
                     )
 
                 elif o.group_by_lot and not o.group_by_location:
-                    for lot in p_lines.mapped('lot_id'):
-                        lot_lines = p_lines.filtered(lambda l: l.lot_id == lot)
+                    lot_ids = list(set([l['lot_id'] for l in p_lines if l['lot_id']]))
+                    lots = self.env['stock.production.lot'].browse(lot_ids)
+                    for lot in lots:
+                        lot_lines = [l for l in p_lines if l['lot_id'] == lot.id]
                         row_pos = self._render_report_lines(
                             o, ws, row_pos, ws_params, lot_lines, product, lot_id=lot,
                             loc_ids=product_locations,
@@ -420,16 +444,18 @@ class ReportStockCardReportXlsx(models.TransientModel):
                             loc_ids = self.env["stock.location"].search([("id", "child_of", loc.id)])
                         else:
                             loc_ids = loc
-                        loc_lines = p_lines.filtered(lambda l: l.location_id in loc_ids or l.location_dest_id in loc_ids)
+                        loc_lines = [l for l in p_lines if l['location_id'] in loc_ids.ids or l['location_dest_id'] in loc_ids.ids]
                         if not o.group_by_lot:
                             row_pos = self._render_report_lines(
                                 o, ws, row_pos, ws_params, loc_lines, product, location_id=loc,
                                 loc_ids=loc_ids, include_sublocations=o.include_sublocations)
                         else:
-                            for lot in loc_lines.mapped('lot_id'):
-                                lot_lines = loc_lines.filtered(lambda l: l.lot_id == lot)
+                            lot_ids = list(set([l['lot_id'] for l in loc_lines if l['lot_id']]))
+                            lots = self.env['stock.production.lot'].browse(lot_ids)
+                            for lot in lots:
+                                lot_lines_per_lot = [l for l in loc_lines if l['lot_id'] == lot.id]
                                 row_pos = self._render_report_lines(
-                                    o, ws, row_pos, ws_params, lot_lines, product,
+                                    o, ws, row_pos, ws_params, lot_lines_per_lot, product,
                                     lot_id=lot, location_id=loc, loc_ids=loc_ids,
                                     include_sublocations=o.include_sublocations
                                 )
@@ -439,23 +465,106 @@ class ReportStockCardReportXlsx(models.TransientModel):
             lot_id=False, location_id=False, loc_ids=False,
             include_sublocations=False
             ):
-
         if not lines:
             return row_pos
-        product_lines = lines.filtered(
-            lambda l: not l.is_initial)
-        balance = o._get_initial(lines.filtered(
-            lambda l: l.is_initial))
+        if o.consolidated:
+            return self._render_consolidated_lines(
+                o, ws, row_pos, ws_params, lines, product,
+                lot_id, location_id, loc_ids)
+        else:
+            return self._render_detailed_lines(
+                o, ws, row_pos, ws_params, lines, product,
+                lot_id, location_id, loc_ids, include_sublocations)
+
+    def _render_consolidated_lines(
+            self, o, ws, row_pos, ws_params, lines, product,
+            lot_id=False, location_id=False, loc_ids=False):
+        product_lines = [l for l in lines if not l['is_initial']]
+        initial_lines = [l for l in lines if l['is_initial']]
+        balance = o._get_initial(initial_lines)
 
         if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
-            init_landed_cost_value = o._get_initial_landed_cost_value(lines.filtered(
-                lambda l: l.is_initial))
-            init_avg_price_unit = o._get_initial_price_unit(lines.filtered(
-                lambda l: l.is_initial and l.price_unit > 0))
-            init_value = o._get_initial_value(lines.filtered(
-                lambda l: l.is_initial))
-            init_inventory_value = o._get_initial_inventory_value(lines.filtered(
-                lambda l: l.is_initial))
+            init_landed_cost_value = o._get_initial_landed_cost_value(initial_lines)
+            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if l['price_unit'] > 0])
+            init_value = o._get_initial_value(initial_lines)
+        else:
+            init_landed_cost_value = 0
+            init_avg_price_unit = 0
+            init_value = 0
+
+        code = product.default_code or ''
+        if o.sku_type == 'barcode':
+            code = product.barcode or ''
+
+        # Init values
+        init_total_value = init_value + init_landed_cost_value
+
+        # Init values.
+        product_in = 0
+        product_out = 0
+        line_value = 0
+
+        if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
+            for line in product_lines:
+                line_product_in = line['product_in'] if line['location_dest_id'] in loc_ids.ids else 0
+                line_product_out = line['product_out'] if line['location_id'] in loc_ids.ids else 0
+                net_qty = (line_product_in - line_product_out)
+                abs_line_value = abs(line['value'])
+                if net_qty > 0:
+                    line_value += abs_line_value
+                elif net_qty < 0:
+                    line_value += -abs_line_value
+
+                product_in += line_product_in
+                product_out += line_product_out
+
+            end_balance = balance + product_in - product_out
+            value = line_value
+            landed_cost_value = sum([l['landed_cost_value'] for l in product_lines])
+            total_value = value + landed_cost_value + init_value + init_landed_cost_value
+            avg_price_unit = 0 if end_balance == 0 else total_value/end_balance
+        else:
+            value = 0
+            landed_cost_value = 0
+            total_value = 0
+            avg_price_unit = 0
+
+        render_space={
+            'product_id': product and product.display_name or '',
+            'code': code,
+            'init_value': init_value or 0,
+            'init_landed_cost_value': init_landed_cost_value or 0,
+            'init_total_value': init_total_value,
+            'init_avg_price_unit': init_avg_price_unit,
+            'balance': balance,
+            'product_in': product_in,
+            'product_out': product_out,
+            'end_balance': end_balance,
+            'value': init_value + value,
+            'landed_cost_value': landed_cost_value + init_landed_cost_value,
+            'total_value': total_value,
+            'avg_price_unit': avg_price_unit,
+            'lot_id': lot_id and lot_id.name or "",
+            'location_id': location_id and location_id.display_name or "",
+        }
+        return self._write_line(
+            ws, row_pos, ws_params, col_specs_section='data',
+            render_space=render_space,
+            default_format=self.format_tcell_left)
+
+    def _render_detailed_lines(
+            self, o, ws, row_pos, ws_params, lines, product,
+            lot_id=False, location_id=False, loc_ids=False,
+            include_sublocations=False):
+        product_lines = [l for l in lines if not l['is_initial']]
+        initial_lines = [l for l in lines if l['is_initial']]
+        balance = o._get_initial(initial_lines)
+
+        if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
+            init_landed_cost_value = o._get_initial_landed_cost_value(initial_lines)
+            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if l['price_unit'] > 0])
+            init_value = o._get_initial_value(initial_lines)
+            init_inventory_value = o._get_initial_inventory_value(initial_lines)
         else:
             init_landed_cost_value = 0
             init_avg_price_unit = 0
@@ -466,185 +575,115 @@ class ReportStockCardReportXlsx(models.TransientModel):
         if o.sku_type == 'barcode':
             code = product.barcode or ''
 
-        if o.consolidated:
-            # Init values
-            init_total_value = init_value + init_landed_cost_value
+        inventory_value = 0
+        # We add a blank line in consolidated report to have a division between segments.
+        ws.write_row(row_pos, 0, ['', '', '', '', ''],
+                     self.format_tcell_center, )
+        row_pos += 1
+        # Write a title line to find different scenarios easily.
+        ws.write_row(row_pos, 0, [
+            code,
+            product.display_name,
+            lot_id and lot_id.name or '',
+            location_id and location_id.display_name or '',
+            include_sublocations and _("INCLUDE SUBLOCATIONS") or ''],
+                     self.format_theader_blue_center, )
+        row_pos += 1
+        render_space = {
+            'product_id': product.display_name or '',
+            'code': code,
+            'reference': _("INIT BALANCE"),
+            'balance': balance,
+            'value': init_value,
+            'landed_cost_value': init_landed_cost_value,
+            'price_unit': init_avg_price_unit,
+            'date': o.date_from,
+            'origin': '',
+            'account_move_ids': '',
+            'input': '',
+            'output': '',
+            'inventory_value': init_inventory_value,
+            'location_id': '',
+            'location_dest_id': '',
+        }
+        if o.show_partner:
+            render_space.update({"partner_id": ""})
+        if o.show_lot:
+            render_space.update({"lot_id": lot_id and lot_id.name or ""})
+        row_pos = self._write_line(
+            ws, row_pos, ws_params, col_specs_section='data',
+            render_space=render_space,
+            default_format=self.format_tcell_left
+        )
+        inventory_value += init_inventory_value
 
-            # Init values.
-            product_in = 0
-            product_out = 0
+        for line in product_lines:
+            account_moves = ''
+            net_value = 0
             line_value = 0
+            line_price_unit = 0
+            if self.env.user.has_group("account.group_account_user"):
+                move_id = self.env['stock.move'].browse(line['move_id'])
+                posted_moves = move_id.account_move_ids.filtered(lambda x: x.state == 'posted')
+                if posted_moves:
+                    account_moves += ", ".join([
+                        l.name + ' (' + "{0:.2f}".format(round(l.amount, 2)) + ')' \
+                        for l in posted_moves
+                    ])
+                if line['landed_cost_value']:
+                    # Search for the account moves related to the landed costs
+                    landed_cost_ids = self.env['stock.landed.cost'].search([
+                        ('state', '=', 'done'),
+                        ('picking_ids', 'in', move_id.picking_id.id)
+                    ])
+                    for cost in landed_cost_ids:
+                        for move in cost.account_move_id.line_ids.filtered(
+                                lambda r: r.product_id.id == line['product_id'] and r.debit > 0):
+                            account_moves += (
+                                (account_moves and ', ' or '') +
+                                f"{cost.account_move_id.name} ({move.debit:.2f})"
+                            )
 
-            if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
-                for line in product_lines:
-                    line_product_in = line.location_dest_id in loc_ids and line.product_in or 0
-                    line_product_out = line.location_id in loc_ids and line.product_out or 0
-                    net_qty = (line_product_in - line_product_out)
-                    abs_value = abs(line.value + line.landed_cost_value)
-                    abs_line_value = abs(line.value)
-                    if net_qty > 0:
-                        line_value += abs_line_value
-                    elif net_qty < 0:
-                        line_value += -abs_line_value
-
-                    product_in += line_product_in
-                    product_out += line_product_out
-
-                end_balance = balance + product_in - product_out
-                value = line_value
-                landed_cost_value = sum(product_lines.mapped("landed_cost_value"))
-                total_value = value + landed_cost_value + init_value + init_landed_cost_value
-                avg_price_unit = 0 if end_balance == 0 else total_value/end_balance
-            else:
-                value = 0
-                landed_cost_value = 0
-                total_value = 0
-                avg_price_unit = 0
-
-            render_space={
-                'product_id': product and product.display_name or '',
-                'code': code,
-                'init_value': init_value or 0,
-                'init_landed_cost_value': init_landed_cost_value or 0,
-                'init_total_value': init_total_value,
-                'init_avg_price_unit': init_avg_price_unit,
-                'balance': balance,
-                'product_in': product_in,
-                'product_out': product_out,
-                'end_balance': end_balance,
-                'value': init_value + value,
-                'landed_cost_value': landed_cost_value + init_landed_cost_value,
-                'total_value': total_value,
-                'avg_price_unit': avg_price_unit,
-                'lot_id': lot_id and lot_id.name or "",
-                'location_id': location_id and location_id.display_name or "",
-            }
-            row_pos = self._write_line(
-                ws, row_pos, ws_params, col_specs_section='data',
-                render_space=render_space,
-                default_format=self.format_tcell_left)
-        else:
-            inventory_value = 0
-            # We add a blank line in consolidated report to have a division between segments.
-            ws.write_row(row_pos, 0, ['', '','','',''],
-                self.format_tcell_center,)
-            row_pos += 1
-            # Write a title line to find different scenarios easily.
-            ws.write_row(row_pos, 0, [
-                code,
-                product.display_name,
-                lot_id and lot_id.name or '',
-                location_id and location_id.display_name or '',
-                include_sublocations and _("INCLUDE SUBLOCATIONS") or ''],
-                self.format_theader_blue_center, )
-            row_pos += 1
-            render_space = {
+            product_in = line['product_in'] if line['location_dest_id'] in loc_ids.ids else 0
+            product_out = line['product_out'] if line['location_id'] in loc_ids.ids else 0
+            net_qty = (product_in - product_out)
+            balance += net_qty
+            abs_value = abs(line['value'] + line['landed_cost_value'])
+            abs_line_value = abs(line['value'])
+            abs_line_price_unit = abs(line['price_unit'])
+            if net_qty > 0:
+                net_value = abs_value
+                line_value = abs_line_value
+                line_price_unit = abs_line_price_unit
+            elif net_qty < 0:
+                net_value = -abs_value
+                line_value = -abs_line_value
+                line_price_unit = -abs_line_price_unit
+            inventory_value += net_value
+            report_values = {
+                'date': line['date'] or '',
                 'product_id': product.display_name or '',
                 'code': code,
-                'reference': _("INIT BALANCE"),
+                'reference': line['reference'] or '',
+                'origin': line['origin'] or '',
+                'price_unit': line_price_unit or 0.000,
+                'account_move_ids': account_moves,
+                'input': product_in,
+                'output': product_out,
                 'balance': balance,
-                'value': init_value,
-                'landed_cost_value': init_landed_cost_value,
-                'price_unit': init_avg_price_unit,
-                'date': o.date_from,
-                'origin': '',
-                'account_move_ids': '',
-                'input': '',
-                'output': '',
-                'inventory_value': init_inventory_value,
-                'location_id': '',
-                'location_dest_id': '',
+                'value': line_value or 0.000,
+                'inventory_value': inventory_value or 0.000,
+                'landed_cost_value': line['landed_cost_value'],
+                'location_id': location_names.get(line['location_id'], ''),
+                'location_dest_id': location_names.get(line['location_dest_id'], '')
             }
             if o.show_partner:
-                render_space.update({"partner_id": "" })
+                report_values.update({"partner_id": partner_names.get(line['partner_id'], '')})
             if o.show_lot:
-                render_space.update({"lot_id": lot_id and lot_id.name or ""})
+                report_values.update({"lot_id": lot_names.get(line['lot_id'], '')})
             row_pos = self._write_line(
                 ws, row_pos, ws_params, col_specs_section='data',
-                render_space=render_space,
+                render_space=report_values,
                 default_format=self.format_tcell_left
             )
-            #inventory_value += init_value
-            inventory_value += init_inventory_value
-
-            for line in product_lines:
-                account_moves = ''
-                net_value = 0
-                line_value = 0
-                line_price_unit = 0
-                if self.env.user.has_group("account.group_account_user"):
-                    posted_moves = line.move_id.account_move_ids.filtered(lambda x: x.state == 'posted')
-                    if posted_moves:
-                        account_moves += ", ".join([
-                            l.name + ' (' + "{0:.2f}".format(round(l.amount, 2)) + ')' \
-                            for l in posted_moves
-                        ])
-                    if line.landed_cost_value:
-                        # Buscamos los 'stock.landed.cost' con estado 'done' y filtramos por el picking actual.
-                        landed_cost_ids = self.env['stock.landed.cost'] \
-                            .search([('state', '=', 'done')]) \
-                            .filtered(lambda x: line.move_id.picking_id in x.picking_ids)
-
-                        # Inicializamos una cadena vacía para acumular los movimientos.
-                        account_moves = ''
-                        
-                        # Iteramos sobre todos los 'landed_cost_ids' encontrados.
-                        for landed_cost_id in landed_cost_ids:
-                            lcm_id = landed_cost_id.account_move_id
-
-                            # Verificamos si el 'account_move_id' está en estado 'posted'.
-                            if lcm_id and lcm_id.state == 'posted':
-                                # Calculamos el monto de los productos relacionados en los 'landed costs'.
-                                move_amount = sum(
-                                    lcm_id.line_ids.filtered(lambda x: x.product_id == line.product_id).mapped('debit')
-                                ) or 0
-
-                                # Añadimos el nombre del 'account_move' y el monto a la cadena de movimientos.
-                                account_moves += (
-                                    (account_moves and ', ' or '') + 
-                                    lcm_id.name + ' (' + "{0:.2f}".format(move_amount) + ')'
-                                )
-
-                product_in = line.location_dest_id in loc_ids and line.product_in or 0
-                product_out = line.location_id in loc_ids and line.product_out or 0
-                net_qty = (product_in - product_out)
-                balance += net_qty
-                abs_value = abs(line.value + line.landed_cost_value)
-                abs_line_value = abs(line.value)
-                abs_line_price_unit = abs(line.price_unit)
-                if net_qty > 0:
-                    net_value = abs_value
-                    line_value = abs_line_value
-                    line_price_unit = abs_line_price_unit
-                elif net_qty < 0:
-                    net_value = -abs_value
-                    line_value = -abs_line_value
-                    line_price_unit = -abs_line_price_unit
-                inventory_value += net_value
-                report_values = {
-                    'date': line.date or '',
-                    'product_id': line.product_id and line.product_id.display_name or '',
-                    'code': code,
-                    'reference': line.reference or line.move_id.name,
-                    'origin': line.origin or line.move_id.origin or '',
-                    'price_unit': line_price_unit or 0.000,
-                    'account_move_ids': account_moves,
-                    'input': product_in,
-                    'output': product_out,
-                    'balance': balance,
-                    'value': line_value or 0.000,
-                    'inventory_value': inventory_value or 0.000,
-                    'landed_cost_value': line.landed_cost_value,
-                    'location_id': line.location_id and line.location_id.display_name or '',
-                    'location_dest_id': line.location_dest_id and line.location_dest_id.display_name or ''
-                }
-                if o.show_partner:
-                    report_values.update({"partner_id": line.partner_id and line.partner_id.name or "" })
-                if o.show_lot:
-                    report_values.update({"lot_id": line.lot_id and line.lot_id.name or ""})
-                row_pos = self._write_line(
-                    ws, row_pos, ws_params, col_specs_section='data',
-                    render_space=report_values,
-                    default_format=self.format_tcell_left
-                )
         return row_pos

@@ -1,32 +1,10 @@
 # Copyright 2019 Ecosoft Co., Ltd. (http://ecosoft.co.th) License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 import statistics
+import json
 
 from odoo import api, fields, models, _
 
 from odoo.exceptions import UserError
-
-
-class StockCardView(models.TransientModel):
-    _name = 'stock.card.view'
-    _description = 'Stock Card View'
-    _order = 'date'
-
-    date = fields.Datetime()
-    product_id = fields.Many2one(comodel_name='product.product')
-    move_id = fields.Many2one(comodel_name='stock.move')
-    product_uom = fields.Many2one(comodel_name='uom.uom')
-    reference = fields.Char()
-    location_id = fields.Many2one(comodel_name='stock.location')
-    location_dest_id = fields.Many2one(comodel_name='stock.location')
-    is_initial = fields.Boolean()
-    product_in = fields.Float()
-    product_out = fields.Float()
-    value = fields.Float()
-    price_unit = fields.Float()
-    landed_cost_value = fields.Float()
-    origin = fields.Char()
-    lot_id = fields.Many2one(comodel_name="stock.production.lot")
-    partner_id = fields.Many2one(comodel_name="res.partner")
 
 
 class StockCardReport(models.TransientModel):
@@ -68,8 +46,7 @@ class StockCardReport(models.TransientModel):
     code_to = fields.Char()
 
     # Data fields, used to browse report data
-    results = fields.Many2many(
-        comodel_name='stock.card.view',
+    results = fields.Binary(
         compute='_compute_results',
         help='Use compute fields, so there is nothing store in database',
     )
@@ -128,101 +105,117 @@ class StockCardReport(models.TransientModel):
         self.product_ids = products
 
         params = []
-
-        query = """
-           SELECT move.id AS move_id, move.date, move.product_id,
+        # The general query structure is similar for all cases, what changes
+        # is the source of the data (stock.move or stock.move.line) and the
+        # conditions.
+        query_template = """
+            SELECT move.id AS move_id, move.date, move.product_id,
                 move.product_uom, move.reference,
-                move.price_unit,\n"""
-
-        if self.show_lot:
-            query += "line.lot_id,\n"
-
-        if self.show_partner:
-            query += "picking.partner_id,\n"
-
-        if not self.show_lot and not self.lot_ids and self.include_sublocations:
-            query += """
-                move.value, move.landed_cost_value,
-                move.location_id, move.location_dest_id,
-                case when move.location_dest_id in {0}
-                    then move.product_uom_qty end as product_in,
-                case when move.location_id in {0}
-                    then move.product_uom_qty end as product_out,\n"""
-        else:
-            query += """
-                move.value * (line.qty_done/move.product_uom_qty) AS value,
-                move.landed_cost_value * (line.qty_done/move.product_uom_qty) AS landed_cost_value,
-                line.location_id, line.location_dest_id,
-                case when line.location_dest_id in {0}
-                    then line.qty_done end as product_in,
-                case when line.location_id in {0}
-                    then line.qty_done end as product_out,\n"""
-
-        query += """
-
-            case when move.date < '{3}' then True else False end as is_initial,
+                move.price_unit,
+                {lot_select}
+                {partner_select}
+                {value_select}
+                {landed_cost_select}
+                {location_select}
+                {location_dest_select}
+                CASE WHEN {location_dest_field} in %s
+                    THEN {qty_field} END as product_in,
+                CASE WHEN {location_field} in %s
+                    THEN {qty_field} END as product_out,
+                CASE WHEN move.date < %s THEN True ELSE False END as is_initial,
                 picking.origin
             FROM stock_move AS move
             LEFT JOIN stock_picking picking ON picking.id = move.picking_id
-            """
-
-        if self.only_accounted_moves:
-            query += """LEFT JOIN account_move as account ON move.id = account.stock_move_id\n"""
-
-        if not self.show_lot and not self.lot_ids and self.include_sublocations:
-            # No need to join as all information is on the move.
-            # Done this way to keep the logic of previus if.
-            pass
-        else:
-            query += """INNER JOIN stock_move_line as line ON line.move_id = move.id\n"""
-
-        if self.include_sublocations:
-            query += """WHERE (move.location_id in {0} or move.location_dest_id in {0})\n"""
-        else:
-            query += """WHERE (line.location_id in {0} or line.location_dest_id in {0})\n"""
-
-        query += """
-            and move.state = 'done' and move.product_id in {1}
-            and CAST(move.date AS date) <= '{2}'\n"""
-
-        if self.only_accounted_moves:
-            query += "    and account.stock_move_id IS NOT NULL\n"
-
-        if self.lot_ids:
-            query += "    and line.lot_id in {4}\n"
-
-        query += """
+            {move_line_join}
+            {account_join}
+            WHERE ({location_filter})
+            AND move.state = 'done' AND move.product_id in %s
+            AND CAST(move.date AS date) <= %s
+            {account_where}
+            {lot_where}
             ORDER BY move.date, move.reference
-            """
+        """
 
-        query = query.format(
-            tuple(locations.ids+[0]), #{0}
-            tuple(self.product_ids.ids+[0]), #{1}
-            self.date_to, #{2}
-            self.date_from, #{3}
-            tuple(self.lot_ids.ids+[0]) #{4}
+        # We build the query based on the report options
+        lot_select = "line.lot_id," if self.show_lot else ""
+        partner_select = "picking.partner_id," if self.show_partner else ""
+        account_join = ""
+        account_where = ""
+        if self.only_accounted_moves:
+            account_join = "LEFT JOIN account_move as account ON move.id = account.stock_move_id"
+            account_where = "AND account.stock_move_id IS NOT NULL"
+
+        lot_where = ""
+        if self.lot_ids:
+            lot_where = "AND line.lot_id in %s"
+
+        # If we are not showing lots, we can use the stock_move table directly
+        if not self.show_lot and not self.lot_ids and self.include_sublocations:
+            move_line_join = ""
+            location_field = "move.location_id"
+            location_dest_field = "move.location_dest_id"
+            qty_field = "move.product_uom_qty"
+            value_select = "move.value,"
+            landed_cost_select = "move.landed_cost_value,"
+            location_select = "move.location_id,"
+            location_dest_select = "move.location_dest_id,"
+            location_filter = "move.location_id in %s OR move.location_dest_id in %s"
+        else:
+            move_line_join = "INNER JOIN stock_move_line as line ON line.move_id = move.id"
+            location_field = "line.location_id"
+            location_dest_field = "line.location_dest_id"
+            qty_field = "line.qty_done"
+            value_select = "move.value * (line.qty_done/move.product_uom_qty) AS value,"
+            landed_cost_select = "move.landed_cost_value * (line.qty_done/move.product_uom_qty) AS landed_cost_value,"
+            location_select = "line.location_id,"
+            location_dest_select = "line.location_dest_id,"
+            location_filter = "line.location_id in %s OR line.location_dest_id in %s"
+
+        query = query_template.format(
+            lot_select=lot_select,
+            partner_select=partner_select,
+            value_select=value_select,
+            landed_cost_select=landed_cost_select,
+            location_select=location_select,
+            location_dest_select=location_dest_select,
+            location_dest_field=location_dest_field,
+            location_field=location_field,
+            qty_field=qty_field,
+            move_line_join=move_line_join,
+            account_join=account_join,
+            location_filter=location_filter,
+            account_where=account_where,
+            lot_where=lot_where,
         )
 
-        self._cr.execute(query, params)
+        params = [
+            tuple(locations.ids + [0]),
+            tuple(locations.ids + [0]),
+            self.date_from,
+            tuple(self.product_ids.ids + [0]),
+            self.date_to,
+        ]
+        if self.lot_ids:
+            params.append(tuple(self.lot_ids.ids + [0]))
+
+        self._cr.execute(query, tuple(params))
         stock_card_results = self._cr.dictfetchall()
-        ReportLine = self.env['stock.card.view']
-        for line in stock_card_results:
-            self.results += ReportLine.new(line)
+        self.results = json.dumps(stock_card_results, default=str).encode('utf-8')
 
     @api.multi
     def _get_initial(self, product_line):
-        product_input_qty = sum(product_line.mapped('product_in'))
-        product_output_qty = sum(product_line.mapped('product_out'))
+        product_input_qty = sum([l['product_in'] or 0 for l in product_line])
+        product_output_qty = sum([l['product_out'] or 0 for l in product_line])
         return product_input_qty - product_output_qty
 
     @api.multi
     def _get_initial_value(self, product_line):
         value = 0
         for line in product_line:
-            line_product_in = line.product_in or 0
-            line_product_out = line.product_out or 0
+            line_product_in = line['product_in'] or 0
+            line_product_out = line['product_out'] or 0
             net_qty = (line_product_in - line_product_out)
-            abs_line_value = abs(line.value)
+            abs_line_value = abs(line['value'])
             if net_qty > 0:
                 value += abs_line_value
             elif net_qty < 0:
@@ -234,10 +227,10 @@ class StockCardReport(models.TransientModel):
     def _get_initial_inventory_value(self, product_line):
         net_value = 0
         for line in product_line:
-            line_product_in = line.product_in or 0
-            line_product_out = line.product_out or 0
+            line_product_in = line['product_in'] or 0
+            line_product_out = line['product_out'] or 0
             net_qty = (line_product_in - line_product_out)
-            abs_value = abs(line.value + line.landed_cost_value)
+            abs_value = abs(line['value'] + line['landed_cost_value'])
             if net_qty > 0:
                 net_value += abs_value
             elif net_qty < 0:
@@ -247,21 +240,15 @@ class StockCardReport(models.TransientModel):
 
     @api.multi
     def _get_initial_landed_cost_value(self, product_line):
-        product_input_value = sum(product_line.filtered(lambda x: x.product_in > 0).mapped('landed_cost_value'))
-        product_output_value = sum(product_line.filtered(lambda x: x.product_out > 0).mapped('landed_cost_value'))
-        return product_input_value - product_output_value
-
-    @api.multi
-    def _get_initial_landed_cost_value(self, product_line):
-        product_input_value = sum(product_line.filtered(lambda x: x.product_in > 0).mapped('landed_cost_value'))
-        product_output_value = sum(product_line.filtered(lambda x: x.product_out > 0).mapped('landed_cost_value'))
+        product_input_value = sum([l['landed_cost_value'] for l in product_line if l['product_in'] > 0])
+        product_output_value = sum([l['landed_cost_value'] for l in product_line if l['product_out'] > 0])
         return product_input_value - product_output_value
 
     @api.multi
     def _get_initial_price_unit(self, product_line):
         if not product_line:
             return 0.000
-        return statistics.mean(product_line.mapped('price_unit'))
+        return statistics.mean([l['price_unit'] for l in product_line])
 
     @api.multi
     def print_report(self, report_type='qweb'):
