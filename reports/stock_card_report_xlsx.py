@@ -393,11 +393,11 @@ class ReportStockCardReportXlsx(models.TransientModel):
             locations = self.env['stock.location'].browse(location_ids)
             location_names = {loc.id: loc.display_name for loc in locations}
 
-            lot_ids = list(set([l['lot_id'] for l in data.results if l['lot_id']]))
+            lot_ids = list(set([l.get('lot_id') for l in data if l.get('lot_id')]))
             lots = self.env['stock.production.lot'].browse(lot_ids)
             lot_names = {lot.id: lot.name for lot in lots}
 
-            partner_ids = list(set([l['partner_id'] for l in data.results if l['partner_id']]))
+            partner_ids = list(set([l.get('partner_id') for l in data if l.get('partner_id')]))
             partners = self.env['res.partner'].browse(partner_ids)
             partner_names = {partner.id: partner.name for partner in partners}
 
