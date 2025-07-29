@@ -395,7 +395,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
             partner_names = {partner.id: partner.name for partner in partners}
 
             for product in products:
-                p_lines = [l for l in data.results if l['product_id'] == product.id]
+                p_lines = [l for l in data if l['product_id'] == product.id]
                 # We compute the location in the lines to avoid printing a section if there is no
                 # product lines on a selected warehouse or location and to include computed locations,
                 # for example, when only warehouse is provided and we print all it's locations.
