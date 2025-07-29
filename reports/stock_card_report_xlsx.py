@@ -488,7 +488,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
 
         if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
             init_landed_cost_value = o._get_initial_landed_cost_value(initial_lines)
-            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if l['price_unit'] > 0])
+            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if (l.get('price_unit') or 0) > 0])
             init_value = o._get_initial_value(initial_lines)
         else:
             init_landed_cost_value = 0
@@ -566,7 +566,7 @@ class ReportStockCardReportXlsx(models.TransientModel):
 
         if self.env.user.has_group("abs_hide_sale_cost_price.group_cost_price_show"):
             init_landed_cost_value = o._get_initial_landed_cost_value(initial_lines)
-            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if l['price_unit'] > 0])
+            init_avg_price_unit = o._get_initial_price_unit([l for l in initial_lines if (l['price_unit'] or 0) > 0])
             init_value = o._get_initial_value(initial_lines)
             init_inventory_value = o._get_initial_inventory_value(initial_lines)
         else:
