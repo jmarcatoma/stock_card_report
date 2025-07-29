@@ -247,8 +247,8 @@ class StockCardReport(models.TransientModel):
 
     @api.multi
     def _get_initial_landed_cost_value(self, product_line):
-        product_input_value = sum([l['landed_cost_value'] for l in product_line if l['product_in'] > 0])
-        product_output_value = sum([l['landed_cost_value'] for l in product_line if l['product_out'] > 0])
+        product_input_value = sum([l['landed_cost_value'] or 0 for l in product_line if (l['product_in'] or 0) > 0])
+        product_output_value = sum([l['landed_cost_value'] or 0 for l in product_line if (l['product_out'] or 0) > 0])
         return product_input_value - product_output_value
 
     @api.multi
