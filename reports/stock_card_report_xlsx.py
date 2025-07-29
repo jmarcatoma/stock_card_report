@@ -379,10 +379,10 @@ class ReportStockCardReportXlsx(models.TransientModel):
                 default_format=self.format_theader_blue_center)
             ws.freeze_panes(row_pos, 0)
 
-            product_ids = list(set([l['product_id'] for l in data.results]))
+            product_ids = list(set([l['product_id'] for l in data]))
             products = self.env['product.product'].browse(product_ids)
 
-            location_ids = list(set([l['location_id'] for l in data.results] + [l['location_dest_id'] for l in data.results]))
+            location_ids = list(set([l['location_id'] for l in data] + [l['location_dest_id'] for l in data]))
             locations = self.env['stock.location'].browse(location_ids)
             location_names = {loc.id: loc.display_name for loc in locations}
 
