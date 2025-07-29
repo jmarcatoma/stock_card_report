@@ -3,7 +3,6 @@
 
 from odoo import models, _
 import json
-from types import SimpleNamespace
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -16,10 +15,6 @@ class ReportStockCardReportXlsx(models.TransientModel):
     def generate_xlsx_report(self, workbook, data, objects):
         self._define_formats(workbook)
         data = json.loads(objects.results)
-        # We will receive a dictionary with all the report data, we will
-        # convert it to a SimpleNamespace to be able to access the data with
-        # the dot notation.
-        data = SimpleNamespace(**data)
         for ws_params in self._get_ws_params(workbook, data, objects):
             ws_name = ws_params.get('ws_name')
             ws_name = self._check_ws_name(ws_name)
